@@ -1,0 +1,36 @@
+name: linux-npu-driver
+base: core24
+version: '1.5.1'
+summary: Intel Linux NPU driver
+description: |
+  Intel® NPU device is an AI inference accelerator integrated with Intel 
+  client CPUs, starting from Intel® Core™ Ultra generation of CPUs (formerly
+  known as Meteor Lake). It enables energy-efficient execution of artificial
+  neural network tasks.
+  For more info, see https://github.com/intel/linux-npu-driver
+grade: devel
+confinement: devmode
+
+apps:
+  npu-driver:
+    environment:
+      LD_LIBRARY_PATH: &library-path
+        $SNAP/lib:$SNAP/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/usr/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      PATH: &path
+        $SNAP/usr/sbin:$SNAP/usr/bin:$SNAP/sbin:$SNAP/bin:$PATH
+
+parts:
+  npu-driver:
+    source-type: git
+    source: https://github.com/intel/linux-npu-driver.git
+    source-tag: v1.5.1
+    plugin: cmake
+    build-packages:
+      - libgmock-dev
+      - libgtest-dev
+      - libssl-dev
+      - libudev-dev
+      - libyaml-cpp-dev
+      - libze-dev
+    stage-packages:
+      - libze1
