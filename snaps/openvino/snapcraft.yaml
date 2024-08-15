@@ -1,0 +1,86 @@
+name: openvino
+base: core22
+version: '2024.3.0'
+summary: OpenVINO with Intel NPU Plugin
+description: |
+  Intel® NPU device is an AI inference accelerator integrated with Intel 
+  client CPUs, starting from Intel® Core™ Ultra generation of CPUs (formerly
+  known as Meteor Lake). It enables energy-efficient execution of artificial
+  neural network tasks.
+  For more info, see https://github.com/intel/linux-npu-driver
+grade: devel
+confinement: devmode
+
+apps:
+  ipython:
+    command: usr/bin/ipython3
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/python:$PYTHONPATH
+      LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
+
+parts:
+  npu-driver:
+    source-type: git
+    source: https://github.com/intel/linux-npu-driver.git
+    source-tag: v1.5.1
+    plugin: cmake
+    cmake-parameters:
+      - -DENABLE_VPUX_COMPILER_BUILD=ON
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    override-pull: |
+      snapcraftctl pull
+      git submodule update --init --recursive
+      git lfs pull
+    build-packages:
+      - build-essential 
+      - git-lfs 
+      - libudev-dev 
+      - libboost-all-dev 
+      - libssl-dev
+  openvino:
+    source-type: git
+    source: https://github.com/openvinotoolkit/openvino.git
+    source-tag: 2024.3.0
+    plugin: cmake
+    cmake-parameters:
+      - -DENABLE_PYTHON=ON
+      - -DPython3_EXECUTABLE=/usr/bin/python3
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    override-pull: |
+      snapcraftctl pull
+      git submodule update --init --recursive
+    build-packages:
+      - ca-certificates
+      - file
+      - build-essential
+      - ninja-build
+      - scons
+      - ccache
+      - gcc-multilib
+      - g++-multilib
+      - pkgconf
+      - git
+      - shellcheck
+      - patchelf
+      - fdupes
+      - gzip
+      - lintian
+      - libtbb-dev
+      - libpugixml-dev
+      - ocl-icd-opencl-dev
+      - opencl-headers
+      - rapidjson-dev
+      - libva-dev
+      - libsnappy-dev
+      - python3-pip
+      - python3-venv
+      - python3-setuptools
+      - libpython3-dev
+      - pybind11-dev
+      - libffi-dev
+      - python3-enchant
+      - wget
+    stage-packages:
+      - python3-numpy
+      - ipython3
+

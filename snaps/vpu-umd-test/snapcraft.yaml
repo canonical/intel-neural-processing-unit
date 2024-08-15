@@ -1,7 +1,7 @@
-name: linux-npu-driver
+name: vpu-umd-test
 base: core22
 version: '1.5.1'
-summary: Intel Linux NPU driver
+summary: Standalone User Mode Driver Test for VPU
 description: |
   Intel® NPU device is an AI inference accelerator integrated with Intel 
   client CPUs, starting from Intel® Core™ Ultra generation of CPUs (formerly
@@ -13,7 +13,7 @@ confinement: devmode
 
 apps:
   vpu-umd-test:
-    command: usr/bin/vpu-vmd-test
+    command: usr/bin/vpu-umd-test
 
 parts:
   npu-driver:
@@ -22,7 +22,6 @@ parts:
     source-tag: v1.5.1
     plugin: cmake
     cmake-parameters:
-      - -DENABLE_VPUX_COMPILER_BUILD=ON
       - -DCMAKE_INSTALL_PREFIX=/usr
     override-pull: |
       snapcraftctl pull
