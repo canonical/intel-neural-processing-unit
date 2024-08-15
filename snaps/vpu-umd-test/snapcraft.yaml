@@ -33,3 +33,13 @@ parts:
       - libudev-dev 
       - libboost-all-dev 
       - libssl-dev
+
+lint:
+  ignore:
+    - library:
+      # These are needed but are flagged
+      # by the linter because they are not
+      # explicitly linked to any binary or
+      # shared object
+      - usr/lib/*/libze_validation_layer*
+      - usr/lib/*/libze_intel_vpu*
