@@ -12,7 +12,7 @@ Build the snap:
 snapcraft
 ```
 
-Install the snap:
+Install the snap (use `--devmode` if testing without NPU snap interface):
 
 ```
 sudo snap install --dangerous ./vpu-umd-test_1.5.1_amd64.snap
@@ -55,7 +55,7 @@ Verify it's running and loaded correctly with:
 
 ```
 lsmod | grep intel_vpu
-dmesg | grep intel_vpu
+sudo dmesg | grep intel_vpu
 ```
 
 TODO: verify firmware is the expected version.
@@ -74,8 +74,17 @@ sudo chown root:render /dev/accel/accel0
 sudo chmod g+rw /dev/accel/accel0
 ```
 
+Create input for tests:
+
+```
+mkdir -p models/add_abc
+curl -o models/add_abc/add_abc.xml https://raw.githubusercontent.com/openvinotoolkit/openvino/master/src/core/tests/models/ir/add_abc.xml
+touch models/add_abc/add_abc.bin
+curl -o basic.yaml https://raw.githubusercontent.com/intel/linux-npu-driver/v1.5.1/validation/umd-test/configs/basic.yaml
+```
+
 Finally run the application:
 
 ```
-vpu-umd-test
+vpu-umd-test --config=basic.yaml
 ```
