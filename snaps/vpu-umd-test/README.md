@@ -70,6 +70,12 @@ NPU device:
 
 ```
 sudo usermod -a -G render $USER # log out and log back in
+```
+
+If this is your first run, or if you re-loaded the `intel_vpu` driver,
+then you'll also need to perform the following:
+
+```
 sudo chown root:render /dev/accel/accel0
 sudo chmod g+rw /dev/accel/accel0
 ```

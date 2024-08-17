@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cp -av $SNAP/usr/lib/x86_64-linux-gnu/firmware/updates/intel/vpu/* $SNAP_DATA
+cp -av $SNAP/lib/firmware/updates/intel/vpu/* $SNAP_DATA

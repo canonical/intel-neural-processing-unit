@@ -1,6 +1,6 @@
 name: vpu-umd-test
 base: core22
-version: '1.5.1'
+version: '1.6.0'
 summary: Standalone User Mode Driver Test for VPU
 description: |
   Intel® NPU device is an AI inference accelerator integrated with Intel 
@@ -22,12 +22,13 @@ parts:
   npu-driver:
     source-type: git
     source: https://github.com/intel/linux-npu-driver.git
-    source-tag: v1.5.1
+    source-tag: v1.6.0
     plugin: cmake
     cmake-parameters:
+      - -DENABLE_VPUX_COMPILER_BUILD=ON
       - -DCMAKE_INSTALL_PREFIX=/usr
     override-pull: |
-      snapcraftctl pull
+      craftctl default
       git submodule update --init --recursive
       git lfs pull
     build-packages:
@@ -36,6 +37,8 @@ parts:
       - libudev-dev 
       - libboost-all-dev 
       - libssl-dev
+    stage-packages:
+      - libtbb12
   set-firmware-path:
     plugin: dump
     source: bin/
@@ -51,3 +54,5 @@ lint:
       # shared object
       - usr/lib/*/libze_validation_layer*
       - usr/lib/*/libze_intel_vpu*
+      - usr/lib/*/libnpu_driver_compiler*
+      - usr/lib/*/libtbb*
