@@ -3,40 +3,52 @@ base: core22
 version: '2024.3.0'
 summary: OpenVINO with Intel NPU Plugin
 description: |
+  OpenVINO is a software toolkit for optimizing and deploying deep learning models.
   Intel® NPU device is an AI inference accelerator integrated with Intel 
   client CPUs, starting from Intel® Core™ Ultra generation of CPUs (formerly
   known as Meteor Lake). It enables energy-efficient execution of artificial
   neural network tasks.
   For more info, see https://github.com/intel/linux-npu-driver
 grade: devel
-confinement: devmode
+confinement: strict
 
 apps:
-  ipython:
+
+  ipython3:
     command: usr/bin/ipython3
     environment:
       PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/python:$PYTHONPATH
       LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
 
+  benchmark-app:
+    command: usr/bin/samples_bin/benchmark_app
+    environment:
+      LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$LD_LIBRARY_PATH
+
+  set-firmware-path:
+    command: usr/bin/set-firmware-path
+    plugs: [kernel-firmware-control]
+
 parts:
+
   npu-driver:
     source-type: git
     source: https://github.com/intel/linux-npu-driver.git
-    source-tag: v1.5.1
+    source-tag: v1.6.0
     plugin: cmake
     cmake-parameters:
       - -DENABLE_VPUX_COMPILER_BUILD=ON
       - -DCMAKE_INSTALL_PREFIX=/usr
     override-pull: |
-      snapcraftctl pull
+      craftctl default
       git submodule update --init --recursive
       git lfs pull
     build-packages:
-      - build-essential 
       - git-lfs 
       - libudev-dev 
       - libboost-all-dev 
       - libssl-dev
+
   openvino:
     source-type: git
     source: https://github.com/openvinotoolkit/openvino.git
@@ -44,11 +56,30 @@ parts:
     plugin: cmake
     cmake-parameters:
       - -DENABLE_PYTHON=ON
-      - -DPython3_EXECUTABLE=/usr/bin/python3
+      - -DPython3_EXECUTABLE=/usr/bin/python3.10
       - -DCMAKE_INSTALL_PREFIX=/usr
     override-pull: |
-      snapcraftctl pull
+      craftctl default
       git submodule update --init --recursive
+    override-build: |
+      craftctl default
+      pip3 install -t ${CRAFT_PART_INSTALL}/usr/python torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu
+      ${CRAFT_PART_INSTALL}/usr/samples/cpp/build_samples.sh -i ${CRAFT_PART_INSTALL}/usr/bin
+    stage:
+      - -usr/python/torch/test/*
+      - -usr/python/torch/bin/FileStoreTest
+      - -usr/python/torch/bin/HashStoreTest
+      - -usr/python/torch/bin/TCPStoreTest
+      - -usr/python/torch/bin/test_edge_op_registration
+      - -usr/python/torch/bin/test_jit
+      - -usr/python/torch/lib/libbackend_with_compiler.so
+      - -usr/python/torch/lib/libjitbackend_test.so
+      - -usr/python/torch/lib/libtorchbind_test.so
+      - -usr/runtime/lib/intel64/libopenvino_intel_gpu_plugin.so
+      - -usr/runtime/3rdparty/tbb/lib/libhwloc*
+      - -usr/runtime/3rdparty/tbb/lib/libtbb_debug*
+      - -usr/runtime/3rdparty/tbb/lib/libtbbbind*
+      - -usr/runtime/3rdparty/tbb/lib/libtbbmalloc*
     build-packages:
       - ca-certificates
       - file
@@ -81,5 +112,23 @@ parts:
       - python3-enchant
       - wget
     stage-packages:
-      - python3-numpy
       - ipython3
+      - ocl-icd-libopencl1
+
+  set-firmware-path:
+    plugin: dump
+    source: bin/
+    organize:
+      '*': usr/bin/
+
+lint:
+  ignore:
+    - library:
+      # These are needed but are flagged
+      # by the linter because they are not
+      # explicitly linked to any binary or
+      # shared object
+      - usr/lib/*/libze_validation_layer*
+      - usr/lib/*/libze_intel_vpu*
+      - usr/lib/*/libnpu_driver_compiler*
+      - usr/python/torch/lib/libtorch_global_deps.so
