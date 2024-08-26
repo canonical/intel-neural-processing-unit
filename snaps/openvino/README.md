@@ -98,7 +98,7 @@ that saves or loads the model after patching the xml file.
 Additionally, because the app does not have permissions to access a user's home
 directory, a different model path must be used compared to the one used in
 the upstream Intel Jupyter notebook. A good choice for the model path is
-`/home/ubuntu/snaps/openvino/current` as this is accessible both inside and outside
+`/home/ubuntu/snap/openvino/current` as this is accessible both inside and outside
 the snap.
 
 ### iPython
@@ -124,7 +124,7 @@ To run on a CPU:
 openvino.benchmark-app -m $model_path -d CPU -hint latency
 ```
 
-To run on a CPU:
+To run on a NPU:
 
 ```
 openvino.benchmark-app -m $model_path -d NPU -hint latency

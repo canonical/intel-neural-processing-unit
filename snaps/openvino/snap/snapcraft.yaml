@@ -23,10 +23,16 @@ slots:
     udev-tagging:
       - kernel: accel[0-9]
         subsystem: accel
+        attributes:
+          vendor: "0x8086" # Intel
       - kernel: accel[1-5][0-9]
         subsystem: accel
+        attributes:
+          vendor: "0x8086" # Intel
       - kernel: accel6[0-3]
         subsystem: accel
+        attributes:
+          vendor: "0x8086" # Intel
 
 plugs:
   intel-npu-plug:
