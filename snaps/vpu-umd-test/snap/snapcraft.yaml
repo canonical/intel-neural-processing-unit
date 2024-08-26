@@ -1,0 +1,63 @@
+name: vpu-umd-test
+base: core22
+version: '1.6.0'
+summary: User Mode Driver with Compiler Tests for NPU
+description: |
+  User mode driver (UMD) with compiler tests for the Intel® NPU software stack.
+  Intel® NPU device is an AI inference accelerator integrated with Intel 
+  client CPUs, starting from Intel® Core™ Ultra generation of CPUs (formerly
+  known as Meteor Lake). It enables energy-efficient execution of artificial
+  neural network tasks.
+  For more info, see https://github.com/intel/linux-npu-driver
+grade: devel
+confinement: strict
+
+apps:
+
+  vpu-umd-test:
+    command: usr/bin/vpu-umd-test
+
+  set-firmware-path:
+    command: usr/bin/set-firmware-path
+    plugs: [kernel-firmware-control]
+
+parts:
+
+  npu-driver:
+    source-type: git
+    source: https://github.com/intel/linux-npu-driver.git
+    source-tag: v1.6.0
+    plugin: cmake
+    cmake-parameters:
+      - -DENABLE_VPUX_COMPILER_BUILD=ON
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    override-pull: |
+      craftctl default
+      git submodule update --init --recursive
+      git lfs pull
+    build-packages:
+      - build-essential 
+      - git-lfs 
+      - libudev-dev 
+      - libboost-all-dev 
+      - libssl-dev
+    stage-packages:
+      - libtbb12
+
+  set-firmware-path:
+    plugin: dump
+    source: bin/
+    organize:
+      '*': usr/bin/
+
+lint:
+  ignore:
+    - library:
+      # These are needed but are flagged
+      # by the linter because they are not
+      # explicitly linked to any binary or
+      # shared object
+      - usr/lib/*/libze_validation_layer*
+      - usr/lib/*/libze_intel_vpu*
+      - usr/lib/*/libnpu_driver_compiler*
+      - usr/lib/*/libtbb*
