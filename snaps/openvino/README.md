@@ -12,8 +12,6 @@ Build the snap:
 snapcraft
 ```
 
-Install the snap (use `--devmode` if testing without NPU snap interface):
-
 ```
 sudo snap install --dangerous ./openvino_2024.3.0_amd64.snap
 ```
@@ -63,7 +61,12 @@ sudo dmesg | grep intel_vpu
 
 ## Running the applications
 
-TODO: connect snap to custom NPU snap interface
+First connect the snap to the `custom-device` interface, which enables
+access to the NPU device node on the host:
+
+```
+sudo snap connect openvino:intel-npu-plug openvino:intel-npu-slot
+```
 
 If you have not done so already, ensure the following
 are performed in oder to set up non-root access to the
@@ -91,6 +94,12 @@ and the suggested workaround until the bug is fixed. The workaround can be deplo
 after you have saved the model to OpenVINO IR format, and before you have compiled it
 with `compiled_model = core.compile_model(model, device)`. You should re-run the cell
 that saves or loads the model after patching the xml file.
+
+Additionally, because the app does not have permissions to access a user's home
+directory, a different model path must be used compared to the one used in
+the upstream Intel Jupyter notebook. A good choice for the model path is
+`/home/ubuntu/snaps/openvino/current` as this is accessible both inside and outside
+the snap.
 
 ### iPython
 
@@ -121,8 +130,10 @@ To run on a CPU:
 openvino.benchmark-app -m $model_path -d NPU -hint latency
 ```
 
-Note this app can also be invoked from an iPython session like so:
+Note this app **cannot** be invoked from an iPython session unless you are running
+in `devmode`:
 
 ```
+# This only works if the snap is installed in dev mode!
 !/snap/bin/openvino.benchmark-app...
 ```

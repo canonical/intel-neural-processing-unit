@@ -12,8 +12,6 @@ Build the snap:
 snapcraft
 ```
 
-Install the snap (use `--devmode` if testing without NPU snap interface):
-
 ```
 sudo snap install --dangerous ./vpu-umd-test_1.5.1_amd64.snap
 ```
@@ -62,7 +60,12 @@ TODO: verify firmware is the expected version.
 
 ## Running the vpu-umd-test application
 
-TODO: connect snap to custom NPU snap interface
+First connect to the `custom-device` interface, which allows access the
+NPU device node on the host:
+
+```
+sudo snap connect vpu-umd-test:intel-npu-plug vpu-umd-test:intel-npu-slot
+```
 
 If you have not done so already, ensure the following
 are performed in oder to set up non-root access to the
@@ -80,17 +83,19 @@ sudo chown root:render /dev/accel/accel0
 sudo chmod g+rw /dev/accel/accel0
 ```
 
-Create input for tests:
+Create input for tests. Note that the data need to be stored in a special
+path that is accessible from inside the snap (`/home/ubuntu/snap/vpu-umd-test/current`).
 
 ```
-mkdir -p models/add_abc
-curl -o models/add_abc/add_abc.xml https://raw.githubusercontent.com/openvinotoolkit/openvino/master/src/core/tests/models/ir/add_abc.xml
-touch models/add_abc/add_abc.bin
-curl -o basic.yaml https://raw.githubusercontent.com/intel/linux-npu-driver/v1.5.1/validation/umd-test/configs/basic.yaml
+mkdir -p snap/vpu-umd-test/current/models/add_abc
+curl -o snap/vpu-umd-test/current/models/add_abc/add_abc.xml https://raw.githubusercontent.com/openvinotoolkit/openvino/master/src/core/tests/models/ir/add_abc.xml
+touch snap/vpu-umd-test/current/models/add_abc/add_abc.bin
+curl -o snap/vpu-umd-test/current/basic.yaml https://raw.githubusercontent.com/intel/linux-npu-driver/v1.5.1/validation/umd-test/configs/basic.yaml
+sed -i "s|models/|snap/vpu-umd-test/current/models/|" snap/vpu-umd-test/current/basic.yaml
 ```
 
 Finally run the application:
 
 ```
-vpu-umd-test --config=basic.yaml
+vpu-umd-test --config=snap/vpu-umd-test/current/basic.yaml
 ```

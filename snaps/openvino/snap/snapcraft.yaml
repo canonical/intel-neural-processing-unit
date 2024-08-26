@@ -12,16 +12,41 @@ description: |
 grade: devel
 confinement: strict
 
+slots:
+  intel-npu-slot:
+    interface: custom-device
+    custom-device: intel-npu-device
+    devices:
+      - /dev/accel/accel[0-9]
+      - /dev/accel/accel[1-5][0-9]
+      - /dev/accel/accel6[0-3]
+    udev-tagging:
+      - kernel: accel[0-9]
+        subsystem: accel
+      - kernel: accel[1-5][0-9]
+        subsystem: accel
+      - kernel: accel6[0-3]
+        subsystem: accel
+
+plugs:
+  intel-npu-plug:
+    interface: custom-device
+    custom-device: intel-npu-device
+
 apps:
 
   ipython3:
     command: usr/bin/ipython3
+    plugs:
+      - intel-npu-plug
+      - network # for common tasks like downloading datasets
     environment:
       PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/python:$PYTHONPATH
       LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$LD_LIBRARY_PATH
 
   benchmark-app:
     command: usr/bin/samples_bin/benchmark_app
+    plugs: [intel-npu-plug]
     environment:
       LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$LD_LIBRARY_PATH
 
