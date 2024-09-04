@@ -8,6 +8,9 @@ grade: devel
 confinement: strict
 
 plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
   npu-libs:
     interface: content
     content: npu-libs-2204
@@ -19,9 +22,9 @@ apps:
   ipython3:
     command: usr/bin/ipython3
     plugs:
+      - intel-npu
       - npu-libs
       - network # for common tasks like downloading datasets
-      - home    # to work cleanly with notebook examples expecting home dir access
     environment:
       PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/python:$PYTHONPATH
       LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$SNAP/usr/lib/npu-libs-2204:$LD_LIBRARY_PATH
@@ -29,8 +32,8 @@ apps:
   benchmark-app:
     command: usr/bin/samples_bin/benchmark_app
     plugs: 
+      - intel-npu
       - npu-libs
-      - home # to work cleanly with examples expecting home dir access
     environment:
       LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/npu-libs-2204:$LD_LIBRARY_PATH
 
