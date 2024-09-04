@@ -1,0 +1,115 @@
+name: openvino
+base: core22
+version: '2024.3.0'
+summary: OpenVINO with Intel NPU Plugin
+description: |
+  OpenVINO is a software toolkit for optimizing and deploying deep learning models.
+grade: devel
+confinement: strict
+
+plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2204
+    target: $SNAP/usr/lib/npu-libs-2204
+    #default-provider: intel-npu-driver # must be in latest/stable channel so commenting for now
+
+apps:
+
+  ipython3:
+    command: usr/bin/ipython3
+    plugs:
+      - intel-npu
+      - npu-libs
+      - network # for common tasks like downloading datasets
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/usr/python:$PYTHONPATH
+      LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$SNAP/usr/lib/npu-libs-2204:$LD_LIBRARY_PATH
+
+  benchmark-app:
+    command: usr/bin/samples_bin/benchmark_app
+    plugs: 
+      - intel-npu
+      - npu-libs
+    environment:
+      LD_LIBRARY_PATH: $SNAP/usr/runtime/lib/intel64:$SNAP/usr/runtime/3rdparty/tbb/lib:$SNAP/usr/lib/npu-libs-2204:$LD_LIBRARY_PATH
+
+parts:
+
+  openvino:
+    source-type: git
+    source: https://github.com/openvinotoolkit/openvino.git
+    source-tag: 2024.3.0
+    plugin: cmake
+    cmake-parameters:
+      - -DENABLE_PYTHON=ON
+      - -DPython3_EXECUTABLE=/usr/bin/python3.10
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    override-pull: |
+      craftctl default
+      git submodule update --init --recursive
+    override-build: |
+      craftctl default
+      pip3 install -t ${CRAFT_PART_INSTALL}/usr/python torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu
+      ${CRAFT_PART_INSTALL}/usr/samples/cpp/build_samples.sh -i ${CRAFT_PART_INSTALL}/usr/bin
+    stage:
+      - -usr/python/torch/test/*
+      - -usr/python/torch/bin/FileStoreTest
+      - -usr/python/torch/bin/HashStoreTest
+      - -usr/python/torch/bin/TCPStoreTest
+      - -usr/python/torch/bin/test_edge_op_registration
+      - -usr/python/torch/bin/test_jit
+      - -usr/python/torch/lib/libbackend_with_compiler.so
+      - -usr/python/torch/lib/libjitbackend_test.so
+      - -usr/python/torch/lib/libtorchbind_test.so
+      - -usr/runtime/lib/intel64/libopenvino_intel_gpu_plugin.so
+      - -usr/runtime/3rdparty/tbb/lib/libhwloc*
+      - -usr/runtime/3rdparty/tbb/lib/libtbb_debug*
+      - -usr/runtime/3rdparty/tbb/lib/libtbbbind*
+      - -usr/runtime/3rdparty/tbb/lib/libtbbmalloc*
+    build-packages:
+      - ca-certificates
+      - file
+      - build-essential
+      - ninja-build
+      - scons
+      - ccache
+      - gcc-multilib
+      - g++-multilib
+      - pkgconf
+      - git
+      - shellcheck
+      - patchelf
+      - fdupes
+      - gzip
+      - lintian
+      - libtbb-dev
+      - libpugixml-dev
+      - ocl-icd-opencl-dev
+      - opencl-headers
+      - rapidjson-dev
+      - libva-dev
+      - libsnappy-dev
+      - python3-pip
+      - python3-venv
+      - python3-setuptools
+      - libpython3-dev
+      - pybind11-dev
+      - libffi-dev
+      - python3-enchant
+      - wget
+    stage-packages:
+      - ipython3
+      - ocl-icd-libopencl1
+
+lint:
+  ignore:
+    - library:
+      # These are needed but are flagged
+      # by the linter because they are not
+      # explicitly linked to any binary or
+      # shared object
+      - usr/python/torch/lib/libtorch_global_deps.so
