@@ -1,0 +1,306 @@
+name: gimp
+version: 2.99.19-dev
+summary: GNU Image Manipulation Program
+description: |
+  Whether you are a graphic designer, photographer, illustrator, or scientist,
+  GIMP provides you with sophisticated tools to get your job done. You can
+  further enhance your productivity with GIMP thanks to many customization
+  options and 3rd party plugins.
+
+grade: stable
+confinement: strict
+base: core24
+compression: lzo
+
+platforms:
+  amd64:
+
+layout:
+  /etc/gimp:
+    bind: $SNAP/etc/gimp
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4
+  /usr/share/locale:
+    bind: $SNAP/usr/share/locale
+
+slots:
+  dbus-gimp:
+    interface: dbus
+    bus: session
+    name: org.gimp.GIMP.UI
+
+plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2404
+    target: $SNAP/usr/lib/npu-libs-2404
+    #default-provider: intel-npu-driver # must be in latest/stable channel so commenting for now
+  process-control:
+    interface: process-control
+
+environment:
+  GI_TYPELIB_PATH: $SNAP/gnome-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gjs/girepository-1.0:$GI_TYPELIB_PATH
+  LD_LIBRARY_PATH: $SNAP/lib:$SNAP/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/gnome-platform/usr/lib:$SNAP/gnome-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/usr/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/npu-libs-2404:$SNAP/usr/local/lib
+  # Ensure the gmic plugin can correctly locate the QT plugins
+  QT_PLUGIN_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/qt6/plugins
+  PYTHONPATH: $SNAP/gnome-platform/usr/lib/python3.12:$SNAP/gimpenv3/lib/python3.12/site-packages:$PYTHONPATH
+
+apps:
+  gimp:
+    command: usr/bin/gimp-2.99
+    extensions: [gnome]
+    desktop: usr/share/applications/gimp.desktop
+    common-id: org.gimp.GIMP
+    slots:
+      - dbus-gimp
+    plugs:
+      - cups-control
+      - browser-support
+      - home
+      - network
+      - removable-media
+      - unity7
+      - intel-npu
+      - npu-libs
+      - process-control
+
+parts:
+  babl:
+    plugin: meson
+    source: https://gitlab.gnome.org/GNOME/babl.git
+    # TODO: replace this with a tag on next release
+    #source-commit: c5f97c86224a473cc3fea231f17adef84580f2cc
+    source-tag: BABL_0_1_98
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Dwith-docs=false
+    build-packages:
+      - w3m
+
+  gegl:
+    after:
+      - babl
+    source: https://gitlab.gnome.org/GNOME/gegl.git
+    # TODO: replace this with a tag on next release
+    #source-commit: d540df2ad27c06891271d96247f915073b042a3e
+    source-tag: GEGL_0_4_46
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Ddocs=false
+      - -Dworkshop=true
+    build-packages:
+      - ffmpeg
+      - libexiv2-dev
+      - libfftw3-dev
+      - libgexiv2-2
+      - libglu1-mesa-dev
+      - liblensfun-dev
+      - libluajit-5.1-dev
+      - libmaxflow-dev
+      - libopenexr-dev
+      - libraw-dev
+      - libsdl2-dev
+      - libspiro-dev
+      - libsuitesparse-dev
+      - libv4l-dev
+      - libwebp-dev
+    stage-packages:
+      - ffmpeg
+      - libamd3
+      - libbtf2
+      - libcamd3
+      - libccolamd3
+      - libcholmod5
+      - libcolamd3
+      - libcxsparse4
+      - libexiv2-27
+      - libgexiv2-2
+      - libgraphblas7
+      - libklu2
+      - liblapack3
+      - libldl3
+      - liblensfun1
+      - libluajit-5.1-2
+      - libmaxflow0
+      - libopenexr-3-1-30
+      - libraw-bin
+      - librbio4
+      - libsdl2-2.0-0
+      - libspiro1
+      - libspqr4
+      - libumfpack6
+      - libv4l-0
+
+  gimp:
+    after:
+      - babl
+      - gegl
+    plugin: meson
+    source: https://gitlab.gnome.org/GNOME/gimp.git
+    #source-commit: a92388c433da868c5d84b14362f7a8151d287ad7
+    source-tag: GIMP_2_99_16
+    override-pull: |
+      # TODO: remove `craftctl default` and use this when 2.99.19 actually releases
+      #   tag="$(echo "GIMP_${SNAPCRAFT_PROJECT_VERSION}" | tr "." "_")"
+      #   git clone -b "$tag" https://gitlab.gnome.org/GNOME/gimp.git
+      craftctl default
+      sed -i 's|^Icon=.*|Icon=/usr/share/icons/hicolor/256x256/apps/gimp.png|' desktop/gimp.desktop.in.in
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Dgi-docgen=disabled
+      - -Dg-ir-doc=false
+      - -Dbuild-id=org.gimp.GIMP.snapcraft.preview
+      - -Dbug-report-url=https://github.com/snapcrafters/gimp/issues/
+      - -Dcheck-update=no
+      - -Denable-default-bin=enabled
+      - -Drelocatable-bundle=yes
+      - -Dlibunwind=true
+    override-stage: |
+      echo "python=/usr/bin/python3" >  $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/interpreters/pygimp.interp
+      echo "python3=/usr/bin/python3" >>  $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/interpreters/pygimp.interp
+      echo "/usr/bin/python=/usr/bin/python3" >>  $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/interpreters/pygimp.interp
+      echo "/usr/bin/python3=/usr/bin/python3" >>  $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/interpreters/pygimp.interp
+      echo ":Python:E::py::python3:" >>  $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/interpreters/pygimp.interp
+      craftctl default
+    build-environment:
+      - BABL_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1
+      - GEGL_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4
+      - GI_TYPELIB_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/girepository-1.0:$GI_TYPELIB_PATH
+      - LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$CRAFT_STAGE/usr/lib:$CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+    build-packages:
+      - automake
+      - intltool
+      - iso-codes
+      - libaa1-dev
+      - libappstream-glib-dev
+      - libart-2.0-dev
+      - libbz2-dev
+      - libcairo-gobject2
+      - libexif-dev
+      - libexpat1-dev
+      - libfftw3-dev
+      - libgexiv2-2
+      - libgpm-dev
+      - libice-dev
+      - libluajit-5.1-dev
+      - liblzma-dev
+      - libmng-dev
+      - libmypaint-dev
+      - libopenexr-dev
+      - libslang2-dev
+      - libsm-dev
+      - libunwind-dev
+      - libwebp-dev
+      - libwmf-dev
+      - libxmu-dev
+      - libxpm-dev
+      - luajit
+      - poppler-data
+      - xdg-utils
+      - xsltproc
+    stage-packages:
+      - evince
+      - ghostscript
+      - iso-codes
+      - libaa1
+      - libappstream-glib8
+      - libart-2.0-2
+      - libbz2-1.0
+      - libexif12
+      - libfftw3-bin
+      - libgexiv2-dev
+      - libgpm2
+      - libheif1
+      - libluajit-5.1-2
+      - liblzma5
+      - libmng2
+      - libmypaint-1.5-1
+      - libmypaint-common
+      - libopenexr-3-1-30
+      - libslang2
+      - libsndio7.0
+      - libunwind8
+      - libwebp7
+      - libwebpdemux2
+      - libwebpmux3
+      - libwmf-0.2-7
+      - libxmu6
+      - libxpm4
+      - libxv1
+      - lua-lgi
+      - luajit
+      - mypaint-brushes
+      - mypaint-data
+      - poppler-data
+
+  openvino-plugin:
+    after: [gimp]
+    plugin: nil
+    source: https://github.com/intel/openvino-ai-plugins-gimp.git
+    source-tag: v2.99-R3.1
+    build-packages:
+      - rsync
+    stage-packages:
+      - ocl-icd-libopencl1
+      - wget
+    override-build: |
+      set -e
+      which python3
+      python3 --version
+      python3 -m pip install --break-system-packages --user virtualenv
+      chmod +x install.sh
+      echo "1 2 3 4 0" | ./install.sh --install_models
+      mkdir -p $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/
+      cp -r $HOME/.config/GIMP/2.99/plug-ins/* $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/
+      sed -i "/self.core.set_property({'CACHE_DIR': os.path.join(model, 'cache')})/d" $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/openvino_utils/tools/openvino_common/models_ov/stable_diffusion_engine.py
+      sed -i "/try_enable_npu_turbo(device, self.core)/d" $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/openvino_utils/tools/openvino_common/models_ov/stable_diffusion_engine.py
+      sed -i 's/if "NPU" in device:/if "STOP" in device:/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/openvino_utils/tools/openvino_common/models_ov/stable_diffusion_engine.py
+      sed -i 's/sd_option_cache = os.path.join(weight_path, ".."/sd_option_cache = os.path.join("."/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/stable_diffusion_ov/stable_diffusion_ov.py
+      sed -i 's/os.path.join(weight_path, "..", "gimp_openvino_run_sd.json"/os.path.join(".", "gimp_openvino_run_sd.json"/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/openvino_utils/tools/stable_diffusion_ov_server.py
+      sed -i 's/file_new_for_path(os.path.join(weight_path, ".."/file_new_for_path(os.path.join("."/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/stable_diffusion_ov/stable_diffusion_ov.py
+      sed -i 's/cv2.imwrite(os.path.join(weight_path, ".."/cv2.imwrite(os.path.join("."/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/openvino_utils/tools/stable_diffusion_ov_server.py
+      sed -i 's/DeviceEnum(supported_modes)/DeviceEnum(["CPU", "Balanced", "NPU"])/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/stable_diffusion_ov/stable_diffusion_ov.py
+      sed -i 's/Power Mode/Device/g' $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gimp/2.99/plug-ins/stable_diffusion_ov/stable_diffusion_ov.py
+      mkdir -p $CRAFT_PART_BUILD/mms_tmp
+      rsync -a $CRAFT_PART_BUILD/mms_tmp $CRAFT_PART_INSTALL/.
+      rsync -a /root/parts/openvino-plugin/gimpenv3 $CRAFT_PART_INSTALL/.
+      rsync -a /root/openvino-ai-plugins-gimp/weights $CRAFT_PART_INSTALL/.
+      echo "{" > $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      echo '      "power modes supported": "yes",' >> $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      echo '      "npu": ["NPU","NPU","NPU","NPU"],' >> $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      echo '      "balanced": ["NPU","CPU","NPU","NPU"],' >> $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      echo '      "cpu": ["CPU","CPU","CPU","CPU"]' >> $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      echo "}" >> $CRAFT_PART_INSTALL/weights/stable-diffusion-ov/stable-diffusion-1.5/square_int8/config.json
+      # Note, the following section installs Intel graphics packages in an attempt to
+      # enable the Intel GPU in the plugin. It did not work but I will keep this here
+      # as a starting point for adding GPU support in the future.
+      mkdir -p neo
+      cd neo
+      wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.20/intel-igc-core_1.0.17537.20_amd64.deb
+      wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.20/intel-igc-opencl_1.0.17537.20_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-level-zero-gpu-dbgsym_1.3.30872.22_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-level-zero-gpu-legacy1-dbgsym_1.3.30872.22_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-level-zero-gpu-legacy1_1.3.30872.22_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-level-zero-gpu_1.3.30872.22_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-opencl-icd-dbgsym_24.35.30872.22_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-opencl-icd-legacy1-dbgsym_24.35.30872.22_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-opencl-icd-legacy1_24.35.30872.22_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/intel-opencl-icd_24.35.30872.22_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/libigdgmm12_22.5.0_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.35.30872.22/ww35.sum
+      sha256sum -c ww35.sum
+      dpkg --root=$CRAFT_PART_INSTALL --force-all -i *.deb
+      craftctl default
+    override-stage: |
+      echo '{"python_path": "/usr/bin/python3", "weight_path": "/snap/gimp/current/weights", "supported_devices": ["CPU", "NPU", "GPU"]}' > $CRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu/gimp/2.99/plug-ins/openvino_utils/tools/gimp_openvino_config.json
+      craftctl default
+
