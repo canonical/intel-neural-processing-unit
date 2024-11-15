@@ -1,0 +1,148 @@
+name: openvino-python
+base: core24
+version: '2024.4.0'
+summary: Snap for testing the OpenVINO Python API
+description: |
+  OpenVINO is a software toolkit for optimizing and deploying deep learning models.
+  This snap includes support for GPU and NPU acceleration, and ships ipython and
+  jupyter for ease of use.
+grade: devel
+confinement: strict
+
+plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2404
+    target: $SNAP/usr/lib/npu-libs-2404
+    #default-provider: intel-npu-driver # must be in latest/stable channel so commenting for now
+  openvino-libs:
+    interface: content
+    content: openvino-toolkit-2404
+    target: $SNAP/openvino
+    #default-provider: openvino-toolkit-2404 # must be in latest/stable channel so commenting for now
+
+apps:
+
+  ipython:
+    command: bin/ipython
+    plugs:
+      - intel-npu # NPU device
+      - npu-libs
+      - openvino-libs
+      - network # for common tasks like downloading datasets
+      - opengl # GPU device
+      - home
+      - hugepages-control
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/openvino/usr/python:$SNAP/openvino/usr/python/openvino/tools/ovc:$PYTHONPATH
+      LD_LIBRARY_PATH: $SNAP/openvino/usr/runtime/lib/intel64:$SNAP/openvino/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/npu-libs-2404:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
+      PATH: $SNAP/openvino/usr/python/openvino/tools/ovc:$PATH
+      OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
+
+  jupyter:
+    command: bin/jupyter
+    plugs:
+      - intel-npu # GPU device
+      - npu-libs
+      - openvino-libs
+      - network # for common tasks like downloading datasets
+      - opengl # GPU device
+      - home
+      - network-bind # needed by jupyter
+      - hugepages-control
+    environment:
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/openvino/usr/python:$SNAP/openvino/usr/python/openvino/tools/ovc:$PYTHONPATH
+      LD_LIBRARY_PATH: $SNAP/openvino/usr/runtime/lib/intel64:$SNAP/openvino/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/npu-libs-2404:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
+      PATH: $SNAP/openvino/usr/python/openvino/tools/ovc:$PATH
+      OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
+
+parts:
+  openvino-python-deps:
+    # This part will install a bunch of python tools and libraries that
+    # are needed to run and validate the GPU device notebook at:
+    # https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gpu-device
+    source-type: git
+    source: https://github.com/openvinotoolkit/openvino.git
+    source-tag: 2024.4.0
+    plugin: python
+    python-requirements: [src/bindings/python/requirements.txt]
+    python-packages: [ipython, jupyterlab, ipywidgets, opencv-python, tqdm, huggingface_hub, matplotlib>=3.4]
+    stage-packages:
+      - libva2 # openvino gpu plugin dep
+      - libgl1 # opencv-python dep
+      - libglu1-mesa # opencv-python dep
+      - libxcb1 # opencv-python dep
+      - libice6 # opencv-python dep
+      - libsm6 # opencv-python dep
+      - libx11-6 # opencv-python dep
+      - libxext6 # opencv-python-dep
+    stage:
+      - -usr/lib/x86_64-linux-gnu/libGLU.so.1.3.1
+      - -usr/lib/x86_64-linux-gnu/libGLX_mesa.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libicuio.so.74.2
+      - -usr/lib/x86_64-linux-gnu/libicutest.so.74.2
+      - -usr/lib/x86_64-linux-gnu/libvulkan.so.1.3.275
+      - -usr/local/lib/libopencl-clang.so
+      - -usr/lib/x86_64-linux-gnu/libOpenGL.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+      - -usr/lib/x86_64-linux-gnu/libXxf86vm.so.1.0.0
+      - -usr/lib/x86_64-linux-gnu/libicutu.so.74.2
+      - -usr/lib/x86_64-linux-gnu/libxcb-dri2.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-present.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-shm.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-sync.so.1.0.0
+      - -usr/lib/x86_64-linux-gnu/libxcb-xfixes.so.0.0.0
+      - -usr/lib/x86_64-linux-gnu/libxshmfence.so.1.0.0
+      - -usr/local/lib/libopencl-clang.so
+      - -usr/local/lib/libopencl-clang.so.14
+      - -usr/lib/x86_64-linux-gnu/libicui18n.so.74.2
+  opencl-driver:
+    # Includes all the compute runtime and OpenCL bits needed for Intel GPU support
+    plugin: nil
+    build-packages:
+      - wget
+    override-build: |
+      mkdir -p neo
+      cd neo
+      # Install Intel graphics compiler and compute runtime
+      # This is required to enable GPU support for OpenVINO
+      # https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-gpu.html
+      wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17791.9/intel-igc-core_1.0.17791.9_amd64.deb
+      wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17791.9/intel-igc-opencl_1.0.17791.9_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/intel-level-zero-gpu-dbgsym_1.6.31294.12_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/intel-level-zero-gpu_1.6.31294.12_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/intel-opencl-icd-dbgsym_24.39.31294.12_amd64.ddeb
+      wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/intel-opencl-icd_24.39.31294.12_amd64.deb
+      wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/libigdgmm12_22.5.2_amd64.deb
+      dpkg --root=$CRAFT_PART_INSTALL --force-all -i *.deb
+      # update paths to the Intel Installable Client Drivers (ICDs) for OpenCL
+      intel_icd="${CRAFT_PART_INSTALL}"/etc/OpenCL/vendors/intel.icd
+      intel_icd_so_path=$(cat ${intel_icd})
+      base_path="/snap/${SNAPCRAFT_PROJECT_NAME}/current"
+      echo "${base_path}""${intel_icd_so_path}" > "${intel_icd}"
+      intel_legacy1_icd="${CRAFT_PART_INSTALL}"/etc/OpenCL/vendors/intel_legacy1.icd
+      if [ -f ${intel_legacy1_icd} ]; then
+        intel_legacy1_icd_so_path=$(cat ${intel_legacy1_icd})
+        echo "${base_path}""${intel_legacy1_icd_so_path}" > "${intel_legacy1_icd}"
+      fi
+      craftctl default
+
+lint:
+  ignore:
+    - library:
+      # These are needed but are flagged
+      # by the linter because they are not
+      # explicitly linked to any binary or
+      # shared object
+      - usr/lib/x86_64-linux-gnu/libva.so.2.2000.0
+      - usr/lib/x86_64-linux-gnu/libze_intel_gpu.so.1.6.31294.12
+      - usr/local/lib/libiga64.so.1.0.17791.9
+      - usr/local/lib/libigc.so.1.0.17791.9
+      - usr/local/lib/libigdfcl.so.1.0.17791.9
+      - usr/local/lib/libopencl-clang.so
+      - usr/local/lib/libopencl-clang.so.14
