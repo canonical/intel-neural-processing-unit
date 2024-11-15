@@ -110,6 +110,8 @@ parts:
       mkdir -p neo
       cd neo
       # Install Intel graphics compiler and compute runtime
+      # This is required to enable GPU support for OpenVINO
+      # https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-gpu.html
       wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17791.9/intel-igc-core_1.0.17791.9_amd64.deb
       wget https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17791.9/intel-igc-opencl_1.0.17791.9_amd64.deb
       wget https://github.com/intel/compute-runtime/releases/download/24.39.31294.12/intel-level-zero-gpu-dbgsym_1.6.31294.12_amd64.ddeb
