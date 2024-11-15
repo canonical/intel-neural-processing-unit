@@ -66,6 +66,7 @@ parts:
     # https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gpu-device
     source-type: git
     source: https://github.com/openvinotoolkit/openvino.git
+    source-tag: 2024.4.0
     plugin: python
     python-requirements: [src/bindings/python/requirements.txt]
     python-packages: [ipython, jupyterlab, ipywidgets, opencv-python, tqdm, huggingface_hub, matplotlib>=3.4]
