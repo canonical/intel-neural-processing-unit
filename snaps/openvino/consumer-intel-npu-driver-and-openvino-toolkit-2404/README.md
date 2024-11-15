@@ -16,7 +16,7 @@ Install the snap:
 sudo snap install --dangerous ./openvino-python_2024.4.0_amd64.snap
 ```
 
-Install content provider snaps to consume from via content interfaces:
+Install content provider snaps to consume from via content interfaces. Since `openvino-toolkit-2404` is not yet in the Snap Store, you first need to build it locally (you can clone [this repo](https://github.com/kenvandine/openvino-toolkit-snap) and run `snapcraft` to build it).
 
 ```
 sudo snap install --beta intel-npu-driver
