@@ -23,17 +23,23 @@ sudo snap install --beta intel-npu-driver
 sudo snap install --dangerous ~/openvino-toolkit-2404_2024.4.0_amd64.snap
 ```
 
-Connect interfaces:
+Connect the following interfaces manually:
 
 ```
-sudo snap connect openvino-python:intel-npu intel-npu-driver:intel-npu
 sudo snap connect openvino-python:npu-libs intel-npu-driver:npu-libs
 sudo snap connect openvino-python:openvino-libs openvino-toolkit-2404:openvino-libs
-sudo snap connect openvino-python:opengl
-sudo snap connect openvino-python:home
-sudo snap connect openvino-python:network
-sudo snap connect openvino-python:network-bind
 sudo snap connect openvino-python:hugepages-control
+```
+
+The following interfaces should auto-connect:
+
+```bash
+$ snap connections | grep openvino
+custom-device            openvino-python:intel-npu        intel-npu-driver:intel-npu  -
+home                     openvino-python:home             :home                       -
+network                  openvino-python:network          :network                    -
+network-bind             openvino-python:network-bind     :network-bind               -
+opengl                   openvino-python:opengl           :opengl                     -
 ```
 
 ## Running apps

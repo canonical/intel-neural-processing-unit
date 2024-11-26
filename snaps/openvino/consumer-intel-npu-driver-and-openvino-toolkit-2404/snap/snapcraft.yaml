@@ -1,6 +1,6 @@
 name: openvino-python
 base: core24
-version: '2024.4.0'
+version: '2024.5.0'
 summary: Snap for testing the OpenVINO Python API
 description: |
   OpenVINO is a software toolkit for optimizing and deploying deep learning models.
@@ -16,7 +16,7 @@ plugs:
   npu-libs:
     interface: content
     content: npu-libs-2404
-    target: $SNAP/usr/lib/npu-libs-2404
+    target: $SNAP/npu-libs
     #default-provider: intel-npu-driver # must be in latest/stable channel so commenting for now
   openvino-libs:
     interface: content
@@ -27,6 +27,7 @@ plugs:
 apps:
 
   ipython:
+    command-chain: [command-chain/openvino-launch]
     command: bin/ipython
     plugs:
       - intel-npu # NPU device
@@ -37,12 +38,11 @@ apps:
       - home
       - hugepages-control
     environment:
-      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/openvino/usr/python:$SNAP/openvino/usr/python/openvino/tools/ovc:$PYTHONPATH
-      LD_LIBRARY_PATH: $SNAP/openvino/usr/runtime/lib/intel64:$SNAP/openvino/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/npu-libs-2404:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
-      PATH: $SNAP/openvino/usr/python/openvino/tools/ovc:$PATH
+      LD_LIBRARY_PATH: $SNAP/npu-libs:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
       OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
 
   jupyter:
+    command-chain: [command-chain/openvino-launch]
     command: bin/jupyter
     plugs:
       - intel-npu # GPU device
@@ -54,9 +54,7 @@ apps:
       - network-bind # needed by jupyter
       - hugepages-control
     environment:
-      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/openvino/usr/python:$SNAP/openvino/usr/python/openvino/tools/ovc:$PYTHONPATH
-      LD_LIBRARY_PATH: $SNAP/openvino/usr/runtime/lib/intel64:$SNAP/openvino/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/npu-libs-2404:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
-      PATH: $SNAP/openvino/usr/python/openvino/tools/ovc:$PATH
+      LD_LIBRARY_PATH: $SNAP/npu-libs:$SNAP/usr/local/lib:$LD_LIBRARY_PATH
       OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
 
 parts:
@@ -66,7 +64,7 @@ parts:
     # https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gpu-device
     source-type: git
     source: https://github.com/openvinotoolkit/openvino.git
-    source-tag: 2024.4.0
+    source-tag: 2024.5.0
     plugin: python
     python-requirements: [src/bindings/python/requirements.txt]
     python-packages: [ipython, jupyterlab, ipywidgets, opencv-python, tqdm, huggingface_hub, matplotlib>=3.4]
@@ -131,6 +129,14 @@ parts:
         echo "${base_path}""${intel_legacy1_icd_so_path}" > "${intel_legacy1_icd}"
       fi
       craftctl default
+  command-chain:
+    plugin: dump
+    source-type: git
+    source: https://github.com/canonical/openvino-toolkit-snap.git
+    #source-branch: openvino-toolkit-2404
+    source-branch: frenchwr/command-chain # temporary for testing
+    stage:
+      - command-chain/openvino-launch
 
 lint:
   ignore:
